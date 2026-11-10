@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>Bản đồ Nguy cơ Ngập lụt & Phơi nhiễm Giao thông Quận Thanh Xuân</title>
+  <!-- Thư viện Leaflet CSS & JS -->
+  <link rel="stylesheet" href="[suspicious link removed]" />
+  <script src="[suspicious link removed]"></script>
+  <style>
+    #map { height: 100vh; width: 100%; }
+    .control-panel { position: absolute; top: 10px; right: 10px; z-index: 1000; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 6px rgba(0,0,0,0.3); }
+  </style>
+</head>
+<body>
+
+  <div id="map"></div>
+
+  <!-- Bảng điều khiển độ trong suốt -->
+  <div class="control-panel">
+    <h4>Độ trong suốt lớp ngập</h4>
+    <input type="range" id="opacity-slider" min="0" max="1" step="0.1" value="0.7">
+    <span id="opacity-val">70%</span>
+  </div>
+
+  <script>
+    // 1. Khởi tạo bản đồ tâm Thanh Xuân (Hà Nội)
+    var map = L.map('map').setView([20.993, 105.807], 14);
+
+    // 2. Thêm bản đồ nền sáng CartoDB
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+      maxZoom: 19,
+      attribution: '© OpenStreetMap & CartoDB'
+    }).addTo(map);
+
+    // 3. Tọa độ góc Thanh Xuân (South-West, North-East)
+    var imageBounds = [[20.980, 105.790], [21.010, 105.825]];
+
+    // 4. Chồng lớp ảnh ngập tích lũy (PNG trong suốt)
+    var floodLayer = L.imageOverlay('flood_cumulative.png', imageBounds, {
+      opacity: 0.7
+    }).addTo(map);
+
+    // Bắt sự kiện thanh trượt Opacity
+    document.getElementById('opacity-slider').addEventListener('input', function(e) {
+      var val = parseFloat(e.target.value);
+      floodLayer.setOpacity(val);
+      document.getElementById('opacity-val').innerText = Math.round(val * 100) + '%';
+    });
+
+    // 5. Tải và chồng lớp GeoJSON giao thông
+    fetch('thanhxuan_roads.geojson')
+      .then(res => res.json())
+      .then(data => {
+        L.geoJSON(data, {
+          style: function(feature) {
+            return { color: '#d63031', weight: 3, opacity: 0.8 };
+          },
+          onEachFeature: function(feature, layer) {
+            var props = feature.properties;
+            layer.bindPopup(`
+              <b>Tuyến đường:</b> ${props.name || 'Đường dân sinh'}<br>
+              <b>Mức độ phơi nhiễm:</b> <span style="color:red;">Rất cao</span><br>
+              <b>Giải pháp đề xuất:</b> ${props.solution || 'Lắp rãnh sinh học Bioswales & Vỉa hè thấm'}
+            `);
+          }
+        }).addTo(map);
+      });
+  </script>
+</body>
+</html>
